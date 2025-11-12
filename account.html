@@ -26,16 +26,33 @@
       object-fit: cover;
       margin-bottom: 20px;
       border: 3px solid #0088cc;
+      cursor: pointer;
+    }
+    .avatar.editable:hover {
+      opacity: 0.8;
+      border-color: #0077b3;
     }
     .username {
       font-size: 24px;
       font-weight: bold;
       margin-bottom: 10px;
       color: #333;
+      cursor: pointer;
+      padding: 5px;
+      border-radius: 5px;
+    }
+    .username.editable:hover {
+      background-color: #f0f8ff;
     }
     .email {
       color: #666;
       margin-bottom: 20px;
+      cursor: pointer;
+      padding: 5px;
+      border-radius: 5px;
+    }
+    .email.editable:hover {
+      background-color: #f0f8ff;
     }
     .user-id {
       color: #999;
@@ -79,6 +96,98 @@
       background: #ffebee;
       border-radius: 10px;
     }
+    .edit-form {
+      display: none;
+      margin-top: 20px;
+      text-align: left;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #333;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    .form-group input:focus {
+      outline: none;
+      border-color: #0088cc;
+    }
+    .button-group {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    .button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background-color 0.3s;
+    }
+    .save-button {
+      background-color: #4caf50;
+      color: white;
+    }
+    .save-button:hover {
+      background-color: #45a049;
+    }
+    .cancel-button {
+      background-color: #f44336;
+      color: white;
+    }
+    .cancel-button:hover {
+      background-color: #da190b;
+    }
+    .edit-button {
+      background-color: #0088cc;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+    .edit-button:hover {
+      background-color: #0077b3;
+    }
+    .message {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      text-align: center;
+    }
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .error-message {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    .auth-type {
+      display: inline-block;
+      padding: 2px 8px;
+      background-color: #e9ecef;
+      border-radius: 12px;
+      font-size: 12px;
+      color: #666;
+      margin-left: 10px;
+    }
   </style>
 </head>
 <body>
@@ -88,9 +197,9 @@
     </div>
     
     <div id="profile-content" style="display: none;">
-      <img id="avatar" class="avatar" src="" alt="Аватар">
-      <h1 id="username" class="username"></h1>
-      <div id="email" class="email"></div>
+      <img id="avatar" class="avatar editable" src="" alt="Аватар" title="Нажмите для изменения">
+      <h1 id="username" class="username editable" title="Нажмите для изменения"></h1>
+      <div id="email" class="email editable" title="Нажмите для изменения"></div>
       <div id="user-id" class="user-id"></div>
       
       <div class="info-grid">
@@ -101,6 +210,33 @@
         <div class="info-item">
           <strong>Дата регистрации:</strong>
           <span id="created-at"></span>
+        </div>
+        <div class="info-item">
+          <strong>Тип авторизации:</strong>
+          <span id="auth-type"></span>
+        </div>
+      </div>
+
+      <div id="message" class="message" style="display: none;"></div>
+      
+      <button id="edit-button" class="edit-button">Редактировать профиль</button>
+      
+      <div id="edit-form" class="edit-form">
+        <div class="form-group">
+          <label for="edit-username">Имя пользователя:</label>
+          <input type="text" id="edit-username" placeholder="Введите имя">
+        </div>
+        <div class="form-group">
+          <label for="edit-avatar">URL аватара:</label>
+          <input type="text" id="edit-avatar" placeholder="Введите URL изображения">
+        </div>
+        <div class="form-group" id="email-group">
+          <label for="edit-email">Email:</label>
+          <input type="email" id="edit-email" placeholder="Введите email">
+        </div>
+        <div class="button-group">
+          <button id="save-button" class="button save-button">Сохранить</button>
+          <button id="cancel-button" class="button cancel-button">Отмена</button>
         </div>
       </div>
       
@@ -113,6 +249,9 @@
   </div>
 
   <script>
+    let currentUser = null;
+    let isEditing = false;
+
     // Get user ID from URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const userId = urlParams.get('user_id');
@@ -132,6 +271,7 @@
         }
         
         const user = await response.json();
+        currentUser = user;
         displayUserProfile(user);
       } catch (error) {
         console.error('Error loading profile:', error);
@@ -147,6 +287,7 @@
       document.getElementById('display-id').textContent = user.id;
       document.getElementById('user-id').textContent = `ID: ${user.id}`;
       document.getElementById('created-at').textContent = new Date(user.created_at).toLocaleDateString('ru-RU');
+      document.getElementById('auth-type').textContent = getAuthTypeDisplay(user.authype);
       
       // Set avatar
       const avatar = document.getElementById('avatar');
@@ -166,6 +307,136 @@
       }
       
       document.getElementById('profile-content').style.display = 'block';
+      
+      // Setup event listeners
+      setupEventListeners();
+    }
+
+    function getAuthTypeDisplay(authType) {
+      const types = {
+        'telegram': 'Telegram',
+        'google': 'Google'
+      };
+      return types[authType] || 'Неизвестно';
+    }
+
+    function setupEventListeners() {
+      // Edit button
+      document.getElementById('edit-button').addEventListener('click', startEditing);
+      
+      // Save button
+      document.getElementById('save-button').addEventListener('click', saveProfile);
+      
+      // Cancel button
+      document.getElementById('cancel-button').addEventListener('click', cancelEditing);
+      
+      // Click on editable elements
+      document.getElementById('username').addEventListener('click', startEditing);
+      document.getElementById('avatar').addEventListener('click', startEditing);
+      document.getElementById('email').addEventListener('click', startEditing);
+    }
+
+    function startEditing() {
+      if (isEditing) return;
+      
+      isEditing = true;
+      
+      // Fill form with current data
+      document.getElementById('edit-username').value = currentUser.username;
+      document.getElementById('edit-avatar').value = currentUser.photo || '';
+      document.getElementById('edit-email').value = currentUser.mail || '';
+      
+      // Hide email field for Google users
+      const emailGroup = document.getElementById('email-group');
+      if (currentUser.authype === 'google') {
+        emailGroup.style.display = 'none';
+      } else {
+        emailGroup.style.display = 'block';
+      }
+      
+      // Show form, hide edit button
+      document.getElementById('edit-form').style.display = 'block';
+      document.getElementById('edit-button').style.display = 'none';
+      
+      // Hide message
+      hideMessage();
+    }
+
+    function cancelEditing() {
+      isEditing = false;
+      document.getElementById('edit-form').style.display = 'none';
+      document.getElementById('edit-button').style.display = 'block';
+      hideMessage();
+    }
+
+    async function saveProfile() {
+      const username = document.getElementById('edit-username').value.trim();
+      const avatar = document.getElementById('edit-avatar').value.trim();
+      const email = document.getElementById('edit-email').value.trim();
+      
+      if (!username) {
+        showMessage('Имя пользователя не может быть пустым', 'error');
+        return;
+      }
+      
+      if (email && !isValidEmail(email)) {
+        showMessage('Введите корректный email', 'error');
+        return;
+      }
+      
+      try {
+        const response = await fetch('https://game.dmytrothemir.workers.dev/api/user/update', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            user_id: currentUser.id,
+            username: username,
+            photo: avatar || null,
+            mail: email || null
+          })
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText);
+        }
+        
+        const updatedUser = await response.json();
+        currentUser = updatedUser;
+        
+        // Update display
+        document.getElementById('username').textContent = updatedUser.username;
+        document.getElementById('email').textContent = updatedUser.mail || 'Email не указан';
+        
+        if (updatedUser.photo) {
+          document.getElementById('avatar').src = updatedUser.photo;
+        }
+        
+        showMessage('Профиль успешно обновлен', 'success');
+        cancelEditing();
+        
+      } catch (error) {
+        console.error('Error updating profile:', error);
+        showMessage('Ошибка при обновлении профиля: ' + error.message, 'error');
+      }
+    }
+
+    function isValidEmail(email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(email);
+    }
+
+    function showMessage(text, type) {
+      const messageElement = document.getElementById('message');
+      messageElement.textContent = text;
+      messageElement.className = `message ${type}`;
+      messageElement.style.display = 'block';
+    }
+
+    function hideMessage() {
+      document.getElementById('message').style.display = 'none';
     }
 
     function showError(message) {
