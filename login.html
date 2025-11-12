@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Вход через Telegram</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background-color: #f0f2f5;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      margin-bottom: 40px;
+    }
+    p {
+      margin-top: 30px;
+      color: #555;
+      max-width: 400px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Вход через Telegram</h1>
+
+  <!-- Telegram Login Widget -->
+  <script async 
+          src="https://telegram.org/js/telegram-widget.js?22"
+          data-telegram-login="connexiongamebot" 
+          data-size="large"
+          data-auth-url="https://game.dmytrothemir.workers.dev/api/auth/telegram"
+          data-request-access="write">
+  </script>
+
+  <p>Нажмите на кнопку выше, чтобы войти через Telegram. После этого вы будете автоматически добавлены в базу данных.</p>
+
+</body>
+</html>
