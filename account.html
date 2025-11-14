@@ -208,6 +208,29 @@
       background-color: #6c757d;
       color: white;
     }
+    .stats-section {
+      margin-top: 30px;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 10px;
+      text-align: left;
+    }
+    .stats-section h3 {
+      margin-top: 0;
+      color: #333;
+      text-align: center;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+    }
+    .stat-item {
+      padding: 8px;
+      background: white;
+      border-radius: 5px;
+      border-left: 3px solid #0088cc;
+    }
   </style>
 </head>
 <body>
@@ -267,6 +290,7 @@
 
   <script>
     let currentUser = null;
+    let currentStats = null;
     let isEditing = false;
 
     // Get user ID from URL parameters
@@ -290,10 +314,121 @@
         const user = await response.json();
         currentUser = user;
         displayUserProfile(user);
+        
+        // Загружаем статистику после отображения профиля
+        currentStats = await loadUserStats(user.id);
+        if (currentStats) {
+          setupEventListeners();
+        }
+        
       } catch (error) {
         console.error('Error loading profile:', error);
         showError('Не удалось загрузить профиль пользователя');
       }
+    }
+
+    // После загрузки профиля загружаем статистику
+    async function loadUserStats(userId) {
+      try {
+        // Сначала проверяем есть ли статистика
+        const statsResponse = await fetch(`https://game.dmytrothemir.workers.dev/api/user/stats?id=${userId}`);
+        
+        if (!statsResponse.ok) {
+          throw new Error('Ошибка загрузки статистики');
+        }
+        
+        const statsData = await statsResponse.json();
+        
+        if (!statsData.exists) {
+          // Если статистики нет - создаем
+          const initResponse = await fetch('https://game.dmytrothemir.workers.dev/api/user/init-stats', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ user_id: userId })
+          });
+          
+          if (!initResponse.ok) {
+            throw new Error('Ошибка создания статистики');
+          }
+          
+          const initData = await initResponse.json();
+          console.log('Статистика создана:', initData);
+          
+          // После создания загружаем снова
+          return await loadUserStats(userId);
+        } else {
+          // Статистика есть - отображаем
+          displayUserStats(statsData.stats);
+          return statsData.stats;
+        }
+        
+      } catch (error) {
+        console.error('Error loading stats:', error);
+        showMessage('Не удалось загрузить игровую статистику', 'error');
+        return null;
+      }
+    }
+
+    function displayUserStats(stats) {
+      // Создаем блок для отображения статистики
+      let statsHTML = `
+        <div class="stats-section">
+          <h3>Игровая статистика</h3>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <strong>Уровень:</strong> ${stats.lvl}
+            </div>
+            <div class="stat-item">
+              <strong>Опыт:</strong> ${stats.xp}/${stats.xp_for_new_lvl}
+            </div>
+            <div class="stat-item">
+              <strong>Здоровье:</strong> ${stats.current_hp}/${stats.max_hp}
+            </div>
+            <div class="stat-item">
+              <strong>Мана:</strong> ${stats.current_mp}/${stats.max_mp}
+            </div>
+            <div class="stat-item">
+              <strong>Физ. атака:</strong> ${stats.ph_power}
+            </div>
+            <div class="stat-item">
+              <strong>Маг. атака:</strong> ${stats.mag_power}
+            </div>
+            <div class="stat-item">
+              <strong>Физ. защита:</strong> ${stats.ph_defense}
+            </div>
+            <div class="stat-item">
+              <strong>Маг. защита:</strong> ${stats.mag_defense}
+            </div>
+            <div class="stat-item">
+              <strong>Крит. урон:</strong> ${stats.critical_damage}%
+            </div>
+            <div class="stat-item">
+              <strong>Шанс крита:</strong> ${stats.critical_chance}%
+            </div>
+            <div class="stat-item">
+              <strong>Скорость:</strong> ${stats.speed}
+            </div>
+            <div class="stat-item">
+              <strong>Точность:</strong> ${stats.accuracy}
+            </div>
+            <div class="stat-item">
+              <strong>Очки прокачки:</strong> ${stats.characteristic_points}
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Добавляем статистику в профиль
+      const profileContent = document.getElementById('profile-content');
+      const existingStats = document.querySelector('.stats-section');
+      
+      if (existingStats) {
+        existingStats.remove();
+      }
+      
+      profileContent.insertAdjacentHTML('beforeend', statsHTML);
     }
 
     function displayUserProfile(user) {
@@ -335,9 +470,6 @@
       }
       
       document.getElementById('profile-content').style.display = 'block';
-      
-      // Setup event listeners
-      setupEventListeners();
     }
 
     function getAuthTypeDisplay(authType) {
