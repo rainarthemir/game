@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход в игру</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            text-align: center;
+        }
+        .container {
+            max-width: 500px;
+            margin: 50px auto;
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        p {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .login-button {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin: 15px 0;
+            background-color: #0088cc;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+        }
+        .login-button:hover {
+            background-color: #0077b3;
+        }
+        .login-button.google {
+            background-color: #db4437;
+        }
+        .login-button.google:hover {
+            background-color: #c33d2e;
+        }
+        .back-button {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #6c757d;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .back-button:hover {
+            background-color: #5a6268;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Вход в игру</h1>
+        <p>Для доступа к игре выберите способ входа:</p>
+        
+        <div>
+            <a href="https://game.dmytrothemir.workers.dev/api/auth/telegram" class="login-button">
+                Войти через Telegram
+            </a>
+            <a href="https://game.dmytrothemir.workers.dev/api/auth/google" class="login-button google">
+                Войти через Google
+            </a>
+        </div>
+        
+        <a href="index.html" class="back-button">На главную</a>
+    </div>
+
+    <script>
+        // Проверяем, может пользователь уже авторизован
+        // Если да - перенаправляем на home.html
+        document.addEventListener('DOMContentLoaded', function() {
+            const sessionToken = localStorage.getItem('session_token');
+            
+            if (sessionToken) {
+                // Проверяем валидность сессии
+                fetch('https://game.dmytrothemir.workers.dev/api/session/verify', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${sessionToken}`
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    }
+                    return null;
+                })
+                .then(data => {
+                    if (data && data.valid) {
+                        window.location.href = 'home.html';
+                    }
+                })
+                .catch(error => {
+                    console.error('Session check error:', error);
+                    // Оставляем на странице входа при ошибке
+                });
+            }
+        });
+    </script>
+</body>
+</html>
