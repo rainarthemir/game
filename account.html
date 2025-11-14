@@ -179,15 +179,6 @@
       color: #721c24;
       border: 1px solid #f5c6cb;
     }
-    .auth-type {
-      display: inline-block;
-      padding: 2px 8px;
-      background-color: #e9ecef;
-      border-radius: 12px;
-      font-size: 12px;
-      color: #666;
-      margin-left: 10px;
-    }
     .auth-badge {
       display: inline-block;
       padding: 4px 12px;
@@ -248,6 +239,29 @@
       border-radius: 3px;
       border-left: 3px solid #4caf50;
     }
+    .auth-buttons {
+      margin: 20px 0;
+      text-align: center;
+    }
+    .login-button {
+      display: inline-block;
+      padding: 12px 24px;
+      background-color: #0088cc;
+      color: white;
+      text-decoration: none;
+      border-radius: 5px;
+      margin: 0 10px;
+      transition: background-color 0.3s;
+    }
+    .login-button:hover {
+      background-color: #0077b3;
+    }
+    .logout-button {
+      background-color: #f44336;
+    }
+    .logout-button:hover {
+      background-color: #da190b;
+    }
   </style>
 </head>
 <body>
@@ -296,8 +310,21 @@
           <button id="cancel-button" class="button cancel-button">Отмена</button>
         </div>
       </div>
-      
-      <a href="index.html" class="back-button">Вернуться на главную</a>
+
+      <div class="auth-buttons">
+        <button id="logout-button" class="login-button logout-button">Выйти</button>
+        <a href="index.html" class="login-button">На главную</a>
+      </div>
+    </div>
+    
+    <div id="login-prompt" class="error" style="display: none;">
+      <h3>Требуется авторизация</h3>
+      <p>Для просмотра профиля необходимо войти в систему.</p>
+      <div class="auth-buttons">
+        <a href="https://game.dmytrothemir.workers.dev/api/auth/telegram" class="login-button">Войти через Telegram</a>
+        <a href="https://game.dmytrothemir.workers.dev/api/auth/google" class="login-button">Войти через Google</a>
+        <a href="index.html" class="login-button">На главную</a>
+      </div>
     </div>
     
     <div id="error" class="error" style="display: none;">
@@ -309,22 +336,109 @@
     let currentUser = null;
     let currentStats = null;
     let isEditing = false;
+    let sessionToken = null;
 
-    // Get user ID from URL parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    const userId = urlParams.get('user_id');
-
-    if (!userId) {
-      showError('ID пользователя не указан');
-    } else {
-      loadUserProfile(userId);
+    // Проверяем наличие сессии в URL или localStorage
+    function getSessionToken() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const sessionFromUrl = urlParams.get('session');
+      
+      if (sessionFromUrl) {
+        // Сохраняем сессию в localStorage и очищаем URL
+        localStorage.setItem('session_token', sessionFromUrl);
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return sessionFromUrl;
+      }
+      
+      return localStorage.getItem('session_token');
     }
 
-    async function loadUserProfile(userId) {
+    // Функция для проверки валидности сессии
+    async function verifySession(token) {
       try {
-        const response = await fetch(`https://game.dmytrothemir.workers.dev/api/user?id=${userId}`);
+        const response = await fetch('https://game.dmytrothemir.workers.dev/api/session/verify', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          return data.valid ? data.user_id : null;
+        }
+        return null;
+      } catch (error) {
+        console.error('Session verification error:', error);
+        return null;
+      }
+    }
+
+    // Функция для выхода
+    async function logout() {
+      if (sessionToken) {
+        try {
+          await fetch('https://game.dmytrothemir.workers.dev/api/session/logout', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${sessionToken}`
+            }
+          });
+        } catch (error) {
+          console.error('Logout error:', error);
+        }
+      }
+      
+      localStorage.removeItem('session_token');
+      sessionToken = null;
+      showLoginPrompt();
+    }
+
+    // Показ формы входа
+    function showLoginPrompt() {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('profile-content').style.display = 'none';
+      document.getElementById('error').style.display = 'none';
+      document.getElementById('login-prompt').style.display = 'block';
+    }
+
+    // Инициализация при загрузке страницы
+    async function init() {
+      sessionToken = getSessionToken();
+      
+      if (!sessionToken) {
+        showLoginPrompt();
+        return;
+      }
+
+      const userId = await verifySession(sessionToken);
+      
+      if (!userId) {
+        // Невалидная сессия
+        localStorage.removeItem('session_token');
+        showLoginPrompt();
+        return;
+      }
+
+      // Сессия валидна, загружаем профиль
+      loadUserProfile();
+    }
+
+    async function loadUserProfile() {
+      try {
+        const response = await fetch('https://game.dmytrothemir.workers.dev/api/user', {
+          headers: {
+            'Authorization': `Bearer ${sessionToken}`
+          }
+        });
         
         if (!response.ok) {
+          if (response.status === 401) {
+            // Неавторизован
+            localStorage.removeItem('session_token');
+            showLoginPrompt();
+            return;
+          }
           throw new Error('Ошибка загрузки профиля');
         }
         
@@ -333,7 +447,7 @@
         displayUserProfile(user);
         
         // Загружаем статистику после отображения профиля
-        currentStats = await loadUserStats(user.id);
+        currentStats = await loadUserStats();
         if (currentStats) {
           setupEventListeners();
         }
@@ -344,22 +458,25 @@
       }
     }
 
-    // После загрузки профиля загружаем статистику
-    async function loadUserStats(userId) {
+    // Обновляем loadUserStats для использования сессии
+    async function loadUserStats() {
       try {
-        // Сначала проверяем есть ли статистика
-        const statsResponse = await fetch(`https://game.dmytrothemir.workers.dev/api/user/stats?id=${userId}`);
+        const statsResponse = await fetch('https://game.dmytrothemir.workers.dev/api/user/stats', {
+          headers: {
+            'Authorization': `Bearer ${sessionToken}`
+          }
+        });
         
         if (!statsResponse.ok) {
-          // Если 404 - значит статистики нет, создаем ее
           if (statsResponse.status === 404) {
             console.log('Статистика не найдена, создаем новую...');
             const initResponse = await fetch('https://game.dmytrothemir.workers.dev/api/user/init-stats', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${sessionToken}`
               },
-              body: JSON.stringify({ user_id: userId })
+              body: JSON.stringify({ user_id: currentUser.id })
             });
             
             if (!initResponse.ok) {
@@ -370,7 +487,11 @@
             console.log('Статистика создана:', initData);
             
             // После создания загружаем снова
-            return await loadUserStats(userId);
+            return await loadUserStats();
+          } else if (statsResponse.status === 401) {
+            localStorage.removeItem('session_token');
+            showLoginPrompt();
+            return null;
           } else {
             throw new Error(`HTTP error! status: ${statsResponse.status}`);
           }
@@ -379,13 +500,13 @@
         const statsData = await statsResponse.json();
         
         if (!statsData.exists) {
-          // Если статистики нет - создаем
           const initResponse = await fetch('https://game.dmytrothemir.workers.dev/api/user/init-stats', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              'Authorization': `Bearer ${sessionToken}`
             },
-            body: JSON.stringify({ user_id: userId })
+            body: JSON.stringify({ user_id: currentUser.id })
           });
           
           if (!initResponse.ok) {
@@ -395,10 +516,8 @@
           const initData = await initResponse.json();
           console.log('Статистика создана:', initData);
           
-          // После создания загружаем снова
-          return await loadUserStats(userId);
+          return await loadUserStats();
         } else {
-          // Статистика есть - отображаем
           displayUserStats(statsData.stats);
           return statsData.stats;
         }
@@ -496,6 +615,7 @@
 
     function displayUserProfile(user) {
       document.getElementById('loading').style.display = 'none';
+      document.getElementById('login-prompt').style.display = 'none';
       
       // Set user data
       document.getElementById('username').textContent = user.username;
@@ -562,6 +682,9 @@
       if (emailElement.classList.contains('editable')) {
         emailElement.addEventListener('click', startEditing);
       }
+      
+      // Новый обработчик для выхода
+      document.getElementById('logout-button').addEventListener('click', logout);
     }
 
     function startEditing() {
@@ -619,7 +742,6 @@
           photo: avatar || null
         };
         
-        // Only include email if it's not a Google account
         if (currentUser.authtype !== 'google') {
           updateData.mail = email || null;
         }
@@ -628,11 +750,17 @@
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionToken}`
           },
           body: JSON.stringify(updateData)
         });
         
         if (!response.ok) {
+          if (response.status === 401) {
+            localStorage.removeItem('session_token');
+            showLoginPrompt();
+            return;
+          }
           const errorText = await response.text();
           throw new Error(errorText);
         }
@@ -699,9 +827,14 @@
 
     function showError(message) {
       document.getElementById('loading').style.display = 'none';
+      document.getElementById('profile-content').style.display = 'none';
+      document.getElementById('login-prompt').style.display = 'none';
       document.getElementById('error').textContent = message;
       document.getElementById('error').style.display = 'block';
     }
+
+    // Инициализируем при загрузке страницы
+    document.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
 </html>
