@@ -328,48 +328,71 @@
     }
 
     // После загрузки профиля загружаем статистику
-    async function loadUserStats(userId) {
-      try {
-        // Сначала проверяем есть ли статистика
-        const statsResponse = await fetch(`https://game.dmytrothemir.workers.dev/api/user/stats?id=${userId}`);
+    // В функции loadUserStats замените обработку ошибок:
+async function loadUserStats(userId) {
+  try {
+    // Сначала проверяем есть ли статистика
+    const statsResponse = await fetch(`https://game.dmytrothemir.workers.dev/api/user/stats?id=${userId}`);
+    
+    if (!statsResponse.ok) {
+      // Если 404 - значит статистики нет, создаем ее
+      if (statsResponse.status === 404) {
+        console.log('Статистика не найдена, создаем новую...');
+        const initResponse = await fetch('https://game.dmytrothemir.workers.dev/api/user/init-stats', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ user_id: userId })
+        });
         
-        if (!statsResponse.ok) {
-          throw new Error('Ошибка загрузки статистики');
+        if (!initResponse.ok) {
+          throw new Error('Ошибка создания статистики: ' + initResponse.status);
         }
         
-        const statsData = await statsResponse.json();
+        const initData = await initResponse.json();
+        console.log('Статистика создана:', initData);
         
-        if (!statsData.exists) {
-          // Если статистики нет - создаем
-          const initResponse = await fetch('https://game.dmytrothemir.workers.dev/api/user/init-stats', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ user_id: userId })
-          });
-          
-          if (!initResponse.ok) {
-            throw new Error('Ошибка создания статистики');
-          }
-          
-          const initData = await initResponse.json();
-          console.log('Статистика создана:', initData);
-          
-          // После создания загружаем снова
-          return await loadUserStats(userId);
-        } else {
-          // Статистика есть - отображаем
-          displayUserStats(statsData.stats);
-          return statsData.stats;
-        }
-        
-      } catch (error) {
-        console.error('Error loading stats:', error);
-        showMessage('Не удалось загрузить игровую статистику', 'error');
-        return null;
+        // После создания загружаем снова
+        return await loadUserStats(userId);
+      } else {
+        throw new Error(`HTTP error! status: ${statsResponse.status}`);
       }
     }
+    
+    const statsData = await statsResponse.json();
+    
+    if (!statsData.exists) {
+      // Если статистики нет - создаем
+      const initResponse = await fetch('https://game.dmytrothemir.workers.dev/api/user/init-stats', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ user_id: userId })
+      });
+      
+      if (!initResponse.ok) {
+        throw new Error('Ошибка создания статистики');
+      }
+      
+      const initData = await initResponse.json();
+      console.log('Статистика создана:', initData);
+      
+      // После создания загружаем снова
+      return await loadUserStats(userId);
+    } else {
+      // Статистика есть - отображаем
+      displayUserStats(statsData.stats);
+      return statsData.stats;
+    }
+    
+  } catch (error) {
+    console.error('Error loading stats:', error);
+    showMessage('Не удалось загрузить игровую статистику: ' + error.message, 'error');
+    return null;
+  }
+}
 
     function displayUserStats(stats) {
       // Создаем блок для отображения статистики
