@@ -231,6 +231,23 @@
       border-radius: 5px;
       border-left: 3px solid #0088cc;
     }
+    .characteristics-section {
+      margin-top: 15px;
+      padding: 15px;
+      background: #e8f4fd;
+      border-radius: 8px;
+    }
+    .characteristics-section h4 {
+      margin-top: 0;
+      color: #0066cc;
+      text-align: center;
+    }
+    .characteristic-item {
+      padding: 6px;
+      background: white;
+      border-radius: 3px;
+      border-left: 3px solid #4caf50;
+    }
   </style>
 </head>
 <body>
@@ -328,71 +345,70 @@
     }
 
     // После загрузки профиля загружаем статистику
-    // В функции loadUserStats замените обработку ошибок:
-async function loadUserStats(userId) {
-  try {
-    // Сначала проверяем есть ли статистика
-    const statsResponse = await fetch(`https://game.dmytrothemir.workers.dev/api/user/stats?id=${userId}`);
-    
-    if (!statsResponse.ok) {
-      // Если 404 - значит статистики нет, создаем ее
-      if (statsResponse.status === 404) {
-        console.log('Статистика не найдена, создаем новую...');
-        const initResponse = await fetch('https://game.dmytrothemir.workers.dev/api/user/init-stats', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ user_id: userId })
-        });
+    async function loadUserStats(userId) {
+      try {
+        // Сначала проверяем есть ли статистика
+        const statsResponse = await fetch(`https://game.dmytrothemir.workers.dev/api/user/stats?id=${userId}`);
         
-        if (!initResponse.ok) {
-          throw new Error('Ошибка создания статистики: ' + initResponse.status);
+        if (!statsResponse.ok) {
+          // Если 404 - значит статистики нет, создаем ее
+          if (statsResponse.status === 404) {
+            console.log('Статистика не найдена, создаем новую...');
+            const initResponse = await fetch('https://game.dmytrothemir.workers.dev/api/user/init-stats', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ user_id: userId })
+            });
+            
+            if (!initResponse.ok) {
+              throw new Error('Ошибка создания статистики: ' + initResponse.status);
+            }
+            
+            const initData = await initResponse.json();
+            console.log('Статистика создана:', initData);
+            
+            // После создания загружаем снова
+            return await loadUserStats(userId);
+          } else {
+            throw new Error(`HTTP error! status: ${statsResponse.status}`);
+          }
         }
         
-        const initData = await initResponse.json();
-        console.log('Статистика создана:', initData);
+        const statsData = await statsResponse.json();
         
-        // После создания загружаем снова
-        return await loadUserStats(userId);
-      } else {
-        throw new Error(`HTTP error! status: ${statsResponse.status}`);
+        if (!statsData.exists) {
+          // Если статистики нет - создаем
+          const initResponse = await fetch('https://game.dmytrothemir.workers.dev/api/user/init-stats', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ user_id: userId })
+          });
+          
+          if (!initResponse.ok) {
+            throw new Error('Ошибка создания статистики');
+          }
+          
+          const initData = await initResponse.json();
+          console.log('Статистика создана:', initData);
+          
+          // После создания загружаем снова
+          return await loadUserStats(userId);
+        } else {
+          // Статистика есть - отображаем
+          displayUserStats(statsData.stats);
+          return statsData.stats;
+        }
+        
+      } catch (error) {
+        console.error('Error loading stats:', error);
+        showMessage('Не удалось загрузить игровую статистику: ' + error.message, 'error');
+        return null;
       }
     }
-    
-    const statsData = await statsResponse.json();
-    
-    if (!statsData.exists) {
-      // Если статистики нет - создаем
-      const initResponse = await fetch('https://game.dmytrothemir.workers.dev/api/user/init-stats', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ user_id: userId })
-      });
-      
-      if (!initResponse.ok) {
-        throw new Error('Ошибка создания статистики');
-      }
-      
-      const initData = await initResponse.json();
-      console.log('Статистика создана:', initData);
-      
-      // После создания загружаем снова
-      return await loadUserStats(userId);
-    } else {
-      // Статистика есть - отображаем
-      displayUserStats(statsData.stats);
-      return statsData.stats;
-    }
-    
-  } catch (error) {
-    console.error('Error loading stats:', error);
-    showMessage('Не удалось загрузить игровую статистику: ' + error.message, 'error');
-    return null;
-  }
-}
 
     function displayUserStats(stats) {
       // Создаем блок для отображения статистики
@@ -437,7 +453,31 @@ async function loadUserStats(userId) {
               <strong>Точность:</strong> ${stats.accuracy}
             </div>
             <div class="stat-item">
+              <strong>Инициатива:</strong> ${stats.initiative}
+            </div>
+            <div class="stat-item">
+              <strong>Чистый урон:</strong> ${stats.pure_dmg_boost}
+            </div>
+            <div class="stat-item">
               <strong>Очки прокачки:</strong> ${stats.characteristic_points}
+            </div>
+          </div>
+          
+          <div class="characteristics-section">
+            <h4>Базовые характеристики</h4>
+            <div class="stats-grid">
+              <div class="characteristic-item">
+                <strong>Интеллект:</strong> ${stats.intelligence}
+              </div>
+              <div class="characteristic-item">
+                <strong>Мудрость:</strong> ${stats.wisdom}
+              </div>
+              <div class="characteristic-item">
+                <strong>Ловкость:</strong> ${stats.dexterity}
+              </div>
+              <div class="characteristic-item">
+                <strong>Телосложение:</strong> ${stats.vitality}
+              </div>
             </div>
           </div>
         </div>
