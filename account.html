@@ -614,47 +614,57 @@
     }
 
     function displayUserProfile(user) {
-      document.getElementById('loading').style.display = 'none';
-      document.getElementById('login-prompt').style.display = 'none';
-      
-      // Set user data
-      document.getElementById('username').textContent = user.username;
-      document.getElementById('display-id').textContent = user.id;
-      document.getElementById('user-id').textContent = `ID: ${user.id}`;
-      document.getElementById('created-at').textContent = new Date(user.created_at).toLocaleDateString('ru-RU');
-      
-      // Set auth badge
-      const authBadge = document.getElementById('auth-badge');
-      authBadge.textContent = getAuthTypeDisplay(user.authtype);
-      authBadge.className = `auth-badge auth-${user.authtype || 'unknown'}`;
-      
-      // Set avatar
-      const avatar = document.getElementById('avatar');
-      if (user.photo) {
-        avatar.src = user.photo;
-      } else {
-        avatar.src = `https://via.placeholder.com/120/0088cc/ffffff?text=${user.username.charAt(0).toUpperCase()}`;
-      }
-      
-      // Set email
-      const emailElement = document.getElementById('email');
-      if (user.mail) {
-        emailElement.textContent = user.mail;
-      } else {
-        emailElement.textContent = 'Email не указан';
-        emailElement.style.color = '#999';
-      }
-      
-      // Make email non-editable for Google users
-      if (user.authtype === 'google') {
-        emailElement.classList.remove('editable');
-        emailElement.style.cursor = 'default';
-        emailElement.title = 'Email нельзя изменить для аккаунтов Google';
-      }
-      
-      document.getElementById('profile-content').style.display = 'block';
-    }
-
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('login-prompt').style.display = 'none';
+  
+  // Проверяем, что user существует и имеет username
+  if (!user || !user.username) {
+    console.error('Invalid user data:', user);
+    showError('Некорректные данные пользователя');
+    return;
+  }
+  
+  // Set user data
+  document.getElementById('username').textContent = user.username;
+  document.getElementById('display-id').textContent = user.id;
+  document.getElementById('user-id').textContent = `ID: ${user.id}`;
+  document.getElementById('created-at').textContent = new Date(user.created_at).toLocaleDateString('ru-RU');
+  
+  // Set auth badge
+  const authBadge = document.getElementById('auth-badge');
+  authBadge.textContent = getAuthTypeDisplay(user.authtype);
+  authBadge.className = `auth-badge auth-${user.authtype || 'unknown'}`;
+  
+  // Set avatar - с исправленной проверкой
+  const avatar = document.getElementById('avatar');
+  if (user.photo) {
+    avatar.src = user.photo;
+  } else {
+    // Безопасное получение первой буквы имени
+    const firstLetter = user.username && user.username.length > 0 
+      ? user.username.charAt(0).toUpperCase() 
+      : '?';
+    avatar.src = `https://via.placeholder.com/120/0088cc/ffffff?text=${firstLetter}`;
+  }
+  
+  // Set email
+  const emailElement = document.getElementById('email');
+  if (user.mail) {
+    emailElement.textContent = user.mail;
+  } else {
+    emailElement.textContent = 'Email не указан';
+    emailElement.style.color = '#999';
+  }
+  
+  // Make email non-editable for Google users
+  if (user.authtype === 'google') {
+    emailElement.classList.remove('editable');
+    emailElement.style.cursor = 'default';
+    emailElement.title = 'Email нельзя изменить для аккаунтов Google';
+  }
+  
+  document.getElementById('profile-content').style.display = 'block';
+}
     function getAuthTypeDisplay(authType) {
       const types = {
         'telegram': 'Telegram',
