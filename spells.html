@@ -419,6 +419,7 @@
                     
                     <div class="spell-limit-info" id="spell-limit-info" style="display: none;">
                         <i class="fa-solid fa-info-circle"></i> 
+                        Уровень <strong id="user-level">1</strong>: 
                         Вы изучили <strong id="current-spells">0</strong> из <strong id="max-spells">0</strong> доступных слотов заклинаний. 
                         Забывайте ненужные заклинания, чтобы освободить место для новых.
                     </div>
@@ -711,9 +712,11 @@
                 const infoElement = document.getElementById('spell-limit-info');
                 const currentElement = document.getElementById('current-spells');
                 const maxElement = document.getElementById('max-spells');
+                const levelElement = document.getElementById('user-level');
                 
                 currentElement.textContent = spellSlotsInfo.current_slots;
                 maxElement.textContent = spellSlotsInfo.max_slots;
+                levelElement.textContent = spellSlotsInfo.user_level;
                 infoElement.style.display = 'block';
                 
                 // Добавляем класс предупреждения, если слоты заполнены
