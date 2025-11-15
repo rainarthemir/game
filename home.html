@@ -76,6 +76,9 @@
             position: relative;
             display: flex;
             align-items: center;
+            /* Увеличиваем область наведения */
+            padding: 10px 15px;
+            margin: -10px -15px;
         }
         
         .spells-text {
@@ -91,13 +94,19 @@
             font-weight: 500;
             white-space: nowrap;
             opacity: 0;
-            transition: opacity 0.3s ease;
+            transition: all 0.3s ease;
             pointer-events: none;
             z-index: 101;
         }
         
+        /* Анимация сдвига иконки при наведении */
+        .spells-wrapper:hover .spells-container {
+            transform: translateX(-10px);
+        }
+        
         .spells-wrapper:hover .spells-text {
             opacity: 1;
+            right: -110px;
         }
         
         .username {
@@ -251,6 +260,11 @@
             
             .spells-text {
                 display: none;
+            }
+            
+            .spells-wrapper {
+                padding: 5px 10px;
+                margin: -5px -10px;
             }
         }
     </style>
