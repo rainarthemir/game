@@ -824,6 +824,8 @@
                     body.value = value;
                 }
 
+                console.log('Sending battle action:', body);
+
                 const response = await fetch('https://game.dmytrothemir.workers.dev/api/battle/action', {
                     method: 'POST',
                     headers: {
@@ -834,6 +836,7 @@
                 });
                 
                 const data = await response.json();
+                console.log('Battle action response:', data);
                 
                 if (data.success) {
                     return data.result;
@@ -1004,13 +1007,13 @@
                 `${currentBattle.monster_mp}/${currentBattle.max_mp}` : '0/0';
 
             // Обновляем здоровье и ману игрока
-            const playerHealthPercent = (currentBattle.user_hp / currentBattle.current_hp) * 100;
+            const playerHealthPercent = (currentBattle.user_hp / currentBattle.user_max_hp) * 100;
             document.getElementById('player-health-fill').style.width = `${playerHealthPercent}%`;
-            document.getElementById('player-health-text').textContent = `${currentBattle.user_hp}/${currentBattle.current_hp}`;
+            document.getElementById('player-health-text').textContent = `${currentBattle.user_hp}/${currentBattle.user_max_hp}`;
 
-            const playerManaPercent = (currentBattle.user_mp / currentBattle.max_mp) * 100;
+            const playerManaPercent = (currentBattle.user_mp / currentBattle.user_max_mp) * 100;
             document.getElementById('player-mana-fill').style.width = `${playerManaPercent}%`;
-            document.getElementById('player-mana-text').textContent = `${currentBattle.user_mp}/${currentBattle.max_mp}`;
+            document.getElementById('player-mana-text').textContent = `${currentBattle.user_mp}/${currentBattle.user_max_mp}`;
 
             // Обновляем скорость игрока
             document.getElementById('player-speed').textContent = currentBattle.speed;
@@ -1072,40 +1075,25 @@
 
         // Обрабатываем результат боя
         function processBattleResult(result) {
+            console.log('Processing battle result:', result);
+            
             // Добавляем действие игрока в лог
-            addLogEntry(result.user_action.message, 'player');
-
-            // Обновляем состояние боя
-            if (result.user_action.new_monster_hp !== undefined) {
-                currentBattle.monster_hp = result.user_action.new_monster_hp;
-            }
-            if (result.user_action.new_user_mp !== undefined) {
-                currentBattle.user_mp = result.user_action.new_user_mp;
-            }
-            if (result.user_action.new_distance !== undefined) {
-                currentBattle.distance = result.user_action.new_distance;
+            if (result.user_action && result.user_action.message) {
+                addLogEntry(result.user_action.message, 'player');
             }
 
-            // Обновляем отображение
-            updateBattleDisplay();
+            // Обновляем состояние боя на основе действия игрока
+            updateBattleFromAction(result.user_action);
 
             // Если бой продолжается, добавляем действие монстра
             if (!result.battle_ended && result.monster_action) {
                 setTimeout(() => {
-                    addLogEntry(result.monster_action.message, 'monster');
+                    if (result.monster_action.message) {
+                        addLogEntry(result.monster_action.message, 'monster');
+                    }
 
                     // Обновляем состояние после действия монстра
-                    if (result.monster_action.new_user_hp !== undefined) {
-                        currentBattle.user_hp = result.monster_action.new_user_hp;
-                    }
-                    if (result.monster_action.new_monster_mp !== undefined) {
-                        currentBattle.monster_mp = result.monster_action.new_monster_mp;
-                    }
-                    if (result.monster_action.new_distance !== undefined) {
-                        currentBattle.distance = result.monster_action.new_distance;
-                    }
-
-                    updateBattleDisplay();
+                    updateBattleFromAction(result.monster_action);
 
                     // Проверяем окончание боя после хода монстра
                     if (result.monster_action.battle_ended) {
@@ -1116,6 +1104,30 @@
                 // Бой окончен действием игрока
                 displayBattleResult(result.winner);
             }
+        }
+
+        // Обновляем состояние боя на основе действия
+        function updateBattleFromAction(action) {
+            if (!action || !currentBattle) return;
+
+            if (action.new_monster_hp !== undefined) {
+                currentBattle.monster_hp = action.new_monster_hp;
+            }
+            if (action.new_user_mp !== undefined) {
+                currentBattle.user_mp = action.new_user_mp;
+            }
+            if (action.new_user_hp !== undefined) {
+                currentBattle.user_hp = action.new_user_hp;
+            }
+            if (action.new_monster_mp !== undefined) {
+                currentBattle.monster_mp = action.new_monster_mp;
+            }
+            if (action.new_distance !== undefined) {
+                currentBattle.distance = action.new_distance;
+            }
+
+            // Обновляем отображение
+            updateBattleDisplay();
         }
 
         // Отображаем результат боя
@@ -1212,7 +1224,7 @@
             // Обработчик для медитации
             document.getElementById('meditate-button').addEventListener('click', async function() {
                 try {
-                    // Восстанавливаем ману (это будет обработано на сервере)
+                    // Медитация - восстанавливаем ману
                     const result = await performBattleAction('meditate');
                     processBattleResult(result);
                 } catch (error) {
