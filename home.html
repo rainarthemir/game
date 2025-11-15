@@ -49,7 +49,7 @@
             gap: 20px;
         }
         
-        .user-icon, .spells-icon {
+        .user-icon, .spells-container {
             background: #667eea;
             color: white;
             width: 40px;
@@ -64,21 +64,23 @@
             position: relative;
         }
         
-        .spells-icon {
+        .spells-container {
             background: #357692;
         }
         
-        .user-icon:hover, .spells-icon:hover {
+        .user-icon:hover, .spells-container:hover {
             transform: scale(1.05);
         }
         
-        .spells-icon:hover {
-            transform: translateX(-80px) scale(1.05);
+        .spells-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
         }
         
         .spells-text {
             position: absolute;
-            right: -90px;
+            right: -120px;
             top: 50%;
             transform: translateY(-50%);
             background: rgba(53, 118, 146, 0.9);
@@ -91,15 +93,17 @@
             opacity: 0;
             transition: opacity 0.3s ease;
             pointer-events: none;
+            z-index: 101;
         }
         
-        .spells-icon:hover .spells-text {
+        .spells-wrapper:hover .spells-text {
             opacity: 1;
         }
         
         .username {
             font-weight: 500;
             color: #4a5568;
+            margin: 0 15px;
         }
         
         /* Основное содержимое */
@@ -245,10 +249,6 @@
                 display: none;
             }
             
-            .spells-icon:hover {
-                transform: scale(1.05);
-            }
-            
             .spells-text {
                 display: none;
             }
@@ -260,11 +260,13 @@
     <header class="header">
         <div class="logo">Игра<span>Мир</span></div>
         <div class="user-menu">
-            <span class="username" id="username-header">Загрузка...</span>
-            <div class="spells-icon" id="spells-icon">
-                <i class="fa-solid fa-book-open"></i>
+            <div class="spells-wrapper">
+                <div class="spells-container" id="spells-container">
+                    <i class="fa-solid fa-book-open"></i>
+                </div>
                 <span class="spells-text">Книга Спеллов</span>
             </div>
+            <span class="username" id="username-header">Загрузка...</span>
             <div class="user-icon" id="user-icon">
                 <i class="fa-solid fa-user"></i>
             </div>
@@ -509,8 +511,8 @@
                 window.location.href = 'account.html';
             });
             
-            // Обработчик для иконки книги заклинаний
-            document.getElementById('spells-icon').addEventListener('click', function() {
+            // Обработчик для контейнера книги заклинаний
+            document.getElementById('spells-container').addEventListener('click', function() {
                 window.location.href = 'spells.html';
             });
             
