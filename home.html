@@ -46,10 +46,10 @@
         .user-menu {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 20px;
         }
         
-        .user-icon {
+        .user-icon, .spells-icon {
             background: #667eea;
             color: white;
             width: 40px;
@@ -61,11 +61,40 @@
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            position: relative;
         }
         
-        .user-icon:hover {
-            background: #5a6fd8;
+        .spells-icon {
+            background: #357692;
+        }
+        
+        .user-icon:hover, .spells-icon:hover {
             transform: scale(1.05);
+        }
+        
+        .spells-icon:hover {
+            transform: translateX(-80px) scale(1.05);
+        }
+        
+        .spells-text {
+            position: absolute;
+            right: -90px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(53, 118, 146, 0.9);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        
+        .spells-icon:hover .spells-text {
+            opacity: 1;
         }
         
         .username {
@@ -215,6 +244,14 @@
             .username {
                 display: none;
             }
+            
+            .spells-icon:hover {
+                transform: scale(1.05);
+            }
+            
+            .spells-text {
+                display: none;
+            }
         }
     </style>
 </head>
@@ -224,6 +261,10 @@
         <div class="logo">Игра<span>Мир</span></div>
         <div class="user-menu">
             <span class="username" id="username-header">Загрузка...</span>
+            <div class="spells-icon" id="spells-icon">
+                <i class="fa-solid fa-book-open"></i>
+                <span class="spells-text">Книга Спеллов</span>
+            </div>
             <div class="user-icon" id="user-icon">
                 <i class="fa-solid fa-user"></i>
             </div>
@@ -393,10 +434,10 @@
                     });
                 } catch (error) {
                     console.error('Logout error:', error);
-                // Продолжаем выход даже при ошибке
-                // Главное - очистить localStorage
-                localStorage.removeItem('session_token');
-                window.location.href = 'index.html';
+                    // Продолжаем выход даже при ошибке
+                    // Главное - очистить localStorage
+                    localStorage.removeItem('session_token');
+                    window.location.href = 'index.html';
                 }
             }
             
@@ -466,6 +507,11 @@
             // Обработчик для иконки пользователя (переход в профиль)
             document.getElementById('user-icon').addEventListener('click', function() {
                 window.location.href = 'account.html';
+            });
+            
+            // Обработчик для иконки книги заклинаний
+            document.getElementById('spells-icon').addEventListener('click', function() {
+                window.location.href = 'spells.html';
             });
             
             // Обработчики для карточек действий
